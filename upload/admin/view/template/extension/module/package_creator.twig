@@ -1,0 +1,22 @@
+{{ header }}{{ column_left }}
+<div id="content">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="pull-right">
+                <a href="{{ action_create }}" class="btn btn-primary">{{ button_create }}</a>
+            </div>
+            <h1>{{ heading_title }}</h1>
+        </div>
+    </div>
+    <div class="container-fluid">
+        {% if error %}
+            <div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> {{ error }}</div>
+        {% endif %}
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <p>{{ text_description }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{{ footer }}
