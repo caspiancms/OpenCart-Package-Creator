@@ -3,20 +3,120 @@
     <div class="page-header">
         <div class="container-fluid">
             <div class="pull-right">
-                <a href="{{ action_create }}" class="btn btn-primary">{{ button_create }}</a>
+                <button type="button" id="button-create" class="btn btn-primary" onclick="createPackage()">
+                    <i class="fa fa-download"></i> {{ button_create }}
+                </button>
             </div>
-            <h1>{{ heading_title }}</h1>
+            <ul class="breadcrumb">
+                {% for breadcrumb in breadcrumbs %}
+                    <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
+    
     <div class="container-fluid">
-        {% if error %}
-            <div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> {{ error }}</div>
+        {% if error_warning %}
+            <div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> {{ error_warning }}</div>
         {% endif %}
-        <div class="panel panel-default">
-            <div class="panel-body">
-                <p>{{ text_description }}</p>
+        
+        {% if generated_license %}
+            <div class="alert alert-success" style="font-size: 14px;">
+                <i class="fa fa-check-circle"></i> پکیج با موفقیت ساخته شد!<br>
+                <strong>دامنه قفل شده:</strong> {{ generated_domain }}<br>
+                <strong>کد لایسنس اختصاصی این دامنه:</strong><br>
+                <textarea class="form-control" style="margin-top:10px; font-weight:bold; text-align:center;" rows="2" readonly onclick="this.select()">{{ generated_license }}</textarea>
+                <small>این کد را به مشتری بدهید. همچنین یک کپی از آن به ایمیل شما ارسال شد.</small>
+                <br><br>
+                <a href="{{ action_download }}" id="link-download-package" class="btn btn-primary"><i class="fa fa-download"></i> دانلود فایل زیپ پکیج</a>
+                <button type="button" id="button-delete-package" class="btn btn-danger" onclick="deletePackage('{{ action_delete }}', '{{ generated_filename }}')">
+                    <i class="fa fa-trash"></i> حذف بسته از هاست
+                </button>
+                <div id="delete-package-msg" style="margin-top:10px; display:none;"></div>
+                <small class="text-muted" style="display:block; margin-top:8px;">این فایل به‌صورت خودکار پس از چند دقیقه از روی هاست پاک می‌شود؛ اگر می‌خواهید همین الان (بلافاصله بعد از دانلود) پاک شود، از دکمه بالا استفاده کنید.</small>
             </div>
+        {% endif %}
+        
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><i class="fa fa-cube"></i> {{ heading_title }}</h3>
+            </div>
+            <div class="panel-body">
+                <form id="form-package-creator" action="{{ action_create }}" method="post">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label" for="input-domain">{{ entry_domain }}</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="domain" value="" id="input-domain" class="form-control" placeholder="example.com" required />
+                            <small class="text-muted">{{ text_backup_mode }}</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label" for="input-license-email">{{ entry_license_email }}</label>
+                        <div class="col-sm-9">
+                            <div class="checkbox" style="margin-top:0; margin-bottom:8px;">
+                                <label>
+                                    <input type="checkbox" name="send_license_email" id="input-send-license-email" value="1" />
+                                    یک ایمیل حاوی کد لایسنس این دامنه به آدرس زیر ارسال شود
+                                </label>
+                            </div>
+                            <input type="text" value="{{ license_backup_email }}" id="input-license-email" class="form-control" readonly tabindex="-1" style="background:#eee; cursor:not-allowed;" />
+                            <small class="text-muted">در صورت تیک زدن، کد لایسنس این دامنه به ایمیل بالا ارسال می‌شود تا نزد شما نگه داشته شود. اگر تیک نزنید، هیچ ایمیلی ارسال نمی‌شود — و در این صورت اگر بعداً کد لایسنس را گم کنید (حتی برای نصب مجدد روی همین دامنه‌ی قفل‌شده)، مسئولیت آن بر عهده‌ی خودتان است.</small>
+                        </div>
+                    </div>
+                </form>
+                <p style="margin-top:15px;">{{ text_description }}</p>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; padding: 15px; border-top: 1px solid #e5e5e5; color: #888;">
+            توسعه یافته توسط <a href="https://caspiancms.ir" target="_blank" style="color: #1e91cf; font-weight: bold;">کاسپین مارکت | CaspianCMS</a>
         </div>
     </div>
 </div>
+
+<script type="text/javascript">
+function createPackage() {
+    var button = $('#button-create');
+    var form = $('#form-package-creator');
+    
+    button.attr('disabled', true).addClass('disabled');
+    button.html('<i class="fa fa-spinner fa-spin"></i> در حال ساخت پکیج... لطفاً صبر کنید');
+    
+    form.submit();
+}
+
+function deletePackage(url, filename) {
+    if (!filename) return;
+    if (!confirm('آیا از حذف این فایل زیپ از روی هاست مطمئن هستید؟ این کار قابل بازگشت نیست.')) {
+        return;
+    }
+
+    var button = $('#button-delete-package');
+    var msgBox = $('#delete-package-msg');
+
+    button.attr('disabled', true).addClass('disabled');
+    button.html('<i class="fa fa-spinner fa-spin"></i> در حال حذف...');
+
+    $.ajax({
+        url: url,
+        type: 'post',
+        data: { filename: filename },
+        dataType: 'json',
+        success: function(json) {
+            if (json.status == 'ok') {
+                msgBox.removeClass('alert-danger').addClass('alert alert-success').text('فایل با موفقیت از روی هاست حذف شد.').show();
+                button.hide();
+                $('#link-download-package').hide();
+            } else {
+                msgBox.removeClass('alert-success').addClass('alert alert-danger').text(json.msg || 'خطا در حذف فایل.').show();
+                button.attr('disabled', false).removeClass('disabled').html('<i class="fa fa-trash"></i> حذف بسته از هاست');
+            }
+        },
+        error: function() {
+            msgBox.removeClass('alert-success').addClass('alert alert-danger').text('خطا در ارتباط با سرور.').show();
+            button.attr('disabled', false).removeClass('disabled').html('<i class="fa fa-trash"></i> حذف بسته از هاست');
+        }
+    });
+}
+</script>
 {{ footer }}
